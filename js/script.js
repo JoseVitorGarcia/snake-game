@@ -6,7 +6,8 @@ const finalScore = document.querySelector(".final-score > span");
 const menu = document.querySelector(".menu-screen");
 const buttonPlay = document.querySelector(".btn-play");
 const audio = new Audio("../assets/audio.mp3");
-
+let isGameOver = false; 
+let nextDirection = undefined; 
 const size = 30;
 
 const initialPosition = { x: 270, y: 240 };
@@ -58,26 +59,31 @@ const drawSnake = () => {
 };
 
 const moveSnake = () => {
-  if (!direction) return;
+  if (!direction) return; // Se não houver direção definida, não move a cobra
+
   const head = snake[snake.length - 1];
+  let newHead;
 
-  if (direction == "right") {
-    snake.push({ x: head.x + size, y: head.y });
+  // Movimenta a cobra na direção atual
+  if (direction === "right") {
+    newHead = { x: head.x + size, y: head.y };
+  } else if (direction === "left") {
+    newHead = { x: head.x - size, y: head.y };
+  } else if (direction === "down") {
+    newHead = { x: head.x, y: head.y + size };
+  } else if (direction === "up") {
+    newHead = { x: head.x, y: head.y - size };
   }
 
-  if (direction == "left") {
-    snake.push({ x: head.x - size, y: head.y });
-  }
+  // Atualiza a posição da cobra
+  snake.push(newHead);
+  snake.shift(); // Remove a cauda
 
-  if (direction == "down") {
-    snake.push({ x: head.x, y: head.y + size });
+  // Após o movimento, atualize a direção para a próxima, se houver
+  if (nextDirection && nextDirection !== direction) {
+    direction = nextDirection;
+    nextDirection = undefined;
   }
-
-  if (direction == "up") {
-    snake.push({ x: head.x, y: head.y - size });
-  }
-
-  snake.shift();
 };
 
 const drawGrid = () => {
@@ -133,44 +139,48 @@ const checkCollision = () => {
 };
 
 const gameOver = () => {
+  isGameOver = true;
   direction = undefined;
   menu.style.display = "flex";
   finalScore.innerText = score.innerText;
   canvas.style.filter = "blur(2px)";
+  clearTimeout(loopId)
 };
 
 const gameLoop = () => {
+  if (isGameOver) return;
   clearInterval(loopId);
   ctx.clearRect(0, 0, 600, 600);
   drawGrid();
   drawFood();
   moveSnake();
+  
   drawSnake();
   checkEat();
   checkCollision();
-  loopId = setTimeout(() => {
-    gameLoop();
-  }, 300);
+  loopId = setTimeout(gameLoop, 180);
 };
 
-gameLoop();
+
 document.addEventListener("keydown", ({ key }) => {
-  switch (key) {
-    case "ArrowRight":
-      if (direction != "left") direction = "right";
-      break;
-    case "ArrowLeft":
-      if (direction != "right") direction = "left";
-      break;
-    case "ArrowDown":
-      if (direction != "up") direction = "down";
-      break;
-    case "ArrowUp":
-      if (direction != "down") direction = "up";
-      break;
-    default:
-      break;
+  if (isGameOver) return;
+
+  // Atualiza a direção apenas se a nova direção não for oposta à atual
+  if (key === "ArrowRight" && direction !== "left") {
+    nextDirection = "right";
+    if (!direction) direction = nextDirection; // Define a direção inicial
+  } else if (key === "ArrowLeft" && direction !== "right") {
+    nextDirection = "left";
+    if (!direction) direction = nextDirection;
+  } else if (key === "ArrowDown" && direction !== "up") {
+    nextDirection = "down";
+    if (!direction) direction = nextDirection;
+  } else if (key === "ArrowUp" && direction !== "down") {
+    nextDirection = "up";
+    if (!direction) direction = nextDirection;
   }
+
+  
 });
 
 buttonPlay.addEventListener("click", () => {
@@ -178,4 +188,8 @@ buttonPlay.addEventListener("click", () => {
   menu.style.display = "none";
   canvas.style.filter = "none";
   snake =[initialPosition];
+  isGameOver =  false
+  gameLoop()
 });
+
+gameLoop();
